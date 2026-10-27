@@ -1,6 +1,10 @@
-# pi-cleanup-agent-tmp
+# pi-jmb-quality-of-life
 
-A [Pi](https://github.com/badlogic/pi-mono) package that gives each agent or subagent its own temporary directory and blocks known over-limit file destinations in OneDrive folders.
+A personal [Pi](https://pi.dev) package for session-scoped temporary files, OneDrive destination-path checks, and concise runtime context. The package and GitHub repository are named `pi-jmb-quality-of-life` (formerly `pi-cleanup-agent-tmp`). GitHub redirects the old repository URL; replace an old Pi source entry rather than adding a second copy. The existing `v1.0.0` tag predates the runtime hook; see the checkout instructions below to test these changes before release.
+
+## Session temporary files
+
+Each agent or subagent receives its own temporary directory; known over-limit file destinations in OneDrive folders are blocked by a separate guard.
 
 Before each agent run, the extension reads `ctx.sessionManager.getSessionId()`, creates `.agents/tmp/<session-id>/` under the current project, and appends its absolute path to the system prompt. Agents are directed to save scratch scripts and intermediate outputs there. Each subagent uses its own session ID, not its parent's ID.
 
@@ -8,12 +12,28 @@ New session directories contain `.pi-session-tmp.json`, an ownership marker reco
 
 On graceful quit, cleanup verifies ownership again and removes only that session directory, including its nested and hidden files. Other sessions, unowned legacy directories, files directly in `.agents/tmp`, and the shared root itself are preserved. Missing, malformed or mismatched ownership evidence leaves the directory untouched and reports a skipped cleanup.
 
+## Runtime context
+
+Before the first model request and each subsequent agent run, the runtime hook appends one short line to the session system prompt:
+
+```text
+Runtime: pi; environment: t3-code; worker: prom2.local; controller: unknown. Use multiplexer-interaction for terminal work.
+```
+
+It recognizes T3's injected MCP URL plus credential presence, or its explicit terminal marker; CMUX workspace plus surface/socket markers; `TMUX`; and `HERDR_ENV=1`. Nested signals are preserved. An installed application or configuration directory alone is not a runtime signal. A standalone session receives identity without the routing-skill recommendation.
+
+The worker is the machine running the Pi process, not the model-provider server or necessarily the destination of an SSH-routed tool. Controller identity is unknown by default. A launcher that knows its controller can supply `PI_JMB_CONTROLLER_HOST`; values must be bounded hostname/address strings, not shell commands or arbitrary prompt text. Neither localhost nor an SSH client IP proves controller identity.
+
+The hook does not save results to `AGENTS.md`, scan installed software, query remote hosts, launch terminals, issue credentials, or authorize orchestration. `/runtime-host` emits the same short diagnostic without a model request. Detection and formatting live in the self-contained `lib/detect-runtime.mjs`, also usable with `node /absolute/package/lib/detect-runtime.mjs --context`.
+
+The runtime and session-temp hooks use independent structured prompt sections on Pi 1.3/1.4 and retain a rendered-prompt fallback for older hosts. Keep only one active runtime hook: delete the former standalone `t3-runtime-context.ts` file or discovery symlink when activating this package. The historical `pi-cleanup-agent-tmp` ownership marker remains unchanged so existing session directories stay verifiable after the package-name change.
+
 ## Install
 
-The session-isolation change is not in the existing `v1.0.0` tag. Use the local checkout instructions below to test it. The existing published release can be installed globally with:
+The runtime hook, package rename, and session-isolation change are not in the existing `v1.0.0` tag. Use the local checkout instructions below to test it. The existing published release can be installed globally with:
 
 ```bash
-pi install git:github.com/jmbenedetto/pi-cleanup-agent-tmp@v1.0.0
+pi install git:github.com/jmbenedetto/pi-jmb-quality-of-life@v1.0.0
 ```
 
 Then start a new Pi session or run `/reload`.
@@ -21,7 +41,7 @@ Then start a new Pi session or run `/reload`.
 Remove it with:
 
 ```bash
-pi remove git:github.com/jmbenedetto/pi-cleanup-agent-tmp
+pi remove git:github.com/jmbenedetto/pi-jmb-quality-of-life
 ```
 
 ## When cleanup runs
@@ -98,13 +118,13 @@ It does not scan or rename existing files on startup. No OneDrive account or clo
 
 ### Try the local checkout
 
-The session-isolation change and the path-length guard are not in the existing `v1.0.0` tag. To try only the guard without changing your package configuration, start a new Pi session with:
+The runtime hook, session-isolation change, and path-length guard are not in the existing `v1.0.0` tag. To try only the guard without changing your package configuration, start a new Pi session with:
 
 ```bash
-pi -e /absolute/path/to/pi-cleanup-agent-tmp/extensions/path-length-guard.ts
+pi -e /absolute/path/to/pi-jmb-quality-of-life/extensions/path-length-guard.ts
 ```
 
-To load the full local package instead of a Git release, replace its Git package entry with the absolute checkout path in your Pi settings, then `/reload`. For a checkout under `~/code`, that entry is `/Users/<your-user>/code/pi-cleanup-agent-tmp`. Load only one cleanup extension: the old globally installed version would still erase the shared root even alongside the corrected local version. Existing running sessions and subagents retain their loaded code until reloaded or restarted.
+To load the full local package instead of a Git release, replace its Git package entry with the absolute checkout path in your Pi settings, then `/reload`. For a checkout under `~/code`, that entry is `/Users/<your-user>/code/pi-jmb-quality-of-life`. Load only one cleanup extension: the old globally installed version would still erase the shared root even alongside the corrected local version. Existing running sessions and subagents retain their loaded code until reloaded or restarted.
 
 ## Development
 
@@ -114,6 +134,8 @@ The development SDK is pinned to Pi 1.3.0 and requires Node.js 22.19.0 or newer.
 npm ci --ignore-scripts
 mkdir -p .tmp
 TMPDIR="$PWD/.tmp" npm run check
+# Optional second-host compatibility proof, without real model calls:
+node tests/startup-proof.mjs /absolute/installed/pi-coding-agent "$PWD/.tmp/startup-proof-host"
 ```
 
 ## License

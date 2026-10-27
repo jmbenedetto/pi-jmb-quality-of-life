@@ -1,7 +1,7 @@
 {
-  "name": "pi-cleanup-agent-tmp",
+  "name": "pi-jmb-quality-of-life",
   "version": "1.0.0",
-  "description": "Pi package that cleans .agents/tmp on graceful exit and guards OneDrive path lengths.",
+  "description": "Personal Pi quality-of-life package: session scratch cleanup, OneDrive path guard, and concise runtime context.",
   "type": "module",
   "license": "MIT",
   "keywords": [
@@ -10,31 +10,35 @@
     "cleanup",
     "temporary-files",
     "onedrive",
-    "path-length"
+    "path-length",
+    "runtime-context"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/jmbenedetto/pi-cleanup-agent-tmp.git"
+    "url": "git+https://github.com/jmbenedetto/pi-jmb-quality-of-life.git"
   },
-  "homepage": "https://github.com/jmbenedetto/pi-cleanup-agent-tmp#readme",
+  "homepage": "https://github.com/jmbenedetto/pi-jmb-quality-of-life#readme",
   "bugs": {
-    "url": "https://github.com/jmbenedetto/pi-cleanup-agent-tmp/issues"
+    "url": "https://github.com/jmbenedetto/pi-jmb-quality-of-life/issues"
   },
   "files": [
     "extensions",
+    "lib",
     "README.md",
     "LICENSE"
   ],
   "pi": {
     "extensions": [
       "./extensions/cleanup-agent-tmp.ts",
-      "./extensions/path-length-guard.ts"
+      "./extensions/path-length-guard.ts",
+      "./extensions/runtime-context.ts"
     ]
   },
   "scripts": {
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "typecheck": "tsc --noEmit",
-    "check": "npm run typecheck && npm test"
+    "test:startup": "node tests/startup-proof.mjs node_modules/@earendil-works/pi-coding-agent .tmp/startup-proof-sdk",
+    "check": "npm run typecheck && npm test && npm run test:startup"
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
@@ -45,6 +49,6 @@
     "typescript": "^5.8.0"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22.19.0"
   }
 }

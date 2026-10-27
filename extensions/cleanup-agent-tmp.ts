@@ -71,14 +71,17 @@ export default function (pi: ExtensionAPI) {
 	pi.on("before_agent_start", async (event, ctx) => {
 		const sessionId = ctx.sessionManager.getSessionId();
 		const directory = await ensureSessionTmp(ctx.cwd, sessionId);
-		return {
-			systemPrompt: `${event.systemPrompt}\n\n## Session temporary files\n` +
-				`- Your session ID is ${sessionId}. Save temporary files, scratch scripts, and intermediate outputs under ${JSON.stringify(directory)}. Create subfolders there as needed.\n` +
-				"- Each agent and subagent uses its own session ID and its own session directory. Subagents must not reuse the parent agent's temporary directory.\n" +
-				`- Keep ${OWNERSHIP_FILE} intact; the extension uses this metadata to verify ownership before cleanup.\n` +
-				"- The extension removes only your session directory on graceful quit. Keep deliverables and files needed after this session in an explicitly chosen persistent location.\n" +
-				"- Leave other session directories and legacy shared temporary files untouched. This session directory is temporary storage, not a durable cache.\n",
-		};
+		const guidance = "## Session temporary files\n" +
+			`- Your session ID is ${sessionId}. Save temporary files, scratch scripts, and intermediate outputs under ${JSON.stringify(directory)}. Create subfolders there as needed.\n` +
+			"- Each agent and subagent uses its own session ID and its own session directory. Subagents must not reuse the parent agent's temporary directory.\n" +
+			`- Keep ${OWNERSHIP_FILE} intact; the extension uses this metadata to verify ownership before cleanup.\n` +
+			"- The extension removes only your session directory on graceful quit. Keep deliverables and files needed after this session in an explicitly chosen persistent location.\n" +
+			"- Leave other session directories and legacy shared temporary files untouched. This session directory is temporary storage, not a durable cache.\n";
+		if (event.systemPromptOptions) {
+			event.systemPromptOptions.sections.session_tmp = guidance;
+			return;
+		}
+		return { systemPrompt: `${event.systemPrompt}\n\n${guidance}` };
 	});
 
 	pi.on("session_shutdown", async (event, ctx) => {
